@@ -1,6 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { supabase } from './supabaseClient';
 import Auth from './Auth';
+import PhotoUpload from './PhotoUpload';
+import Gallery from './Gallery';
 
 function App() {
   const [session, setSession] = useState(null);
@@ -25,6 +27,8 @@ function App() {
         <>
           <p>Logged in as {session.user.email}</p>
           <button onClick={() => supabase.auth.signOut()}>Sign Out</button>
+          <PhotoUpload />
+          <Gallery />
         </>
       ) : (
         <Auth />
