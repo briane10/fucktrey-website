@@ -1,28 +1,17 @@
 import React, { useEffect, useState } from 'react';
-import { supabase } from './supabaseClient';
+import { db } from './firebaseClient';
+import { collection, onSnapshot, query, orderBy } from 'firebase/firestore';
 
 export default function Gallery() {
   const [images, setImages] = useState([]);
 
   useEffect(() => {
-    async function fetchImages() {
-      const { data } = await supabase.storage.from('photos').list('', {
-        limit: 100,
-        sortBy: { column: 'created_at', order: 'desc' },
-      });
-      if (data) {
-        const urls = await Promise.all(
-          data.map(async (file) => {
-            const { data: url } = await supabase.storage
-              .from('photos')
-              .getPublicUrl(file.name);
-            return url.publicUrl;
-          })
-        );
-        setImages(urls);
-      }
-    }
-    fetchImages();
+    const q = query(collection(db, 'photos'), orderBy('createdAt', 'desc'));
+    const unsub = onSnapshot(q, (snapshot) => {
+      const urls = snapshot.docs.map((doc) => doc.data().url);
+      setImages(urls);
+    });
+    return () => unsub();
   }, []);
 
   return (
@@ -34,8 +23,8 @@ export default function Gallery() {
         marginTop: '1rem',
       }}
     >
-      {images.map((src) => (
-        <img key={src} src={src} alt="uploaded" style={{ width: '100%' }} />
+      {images.map((url) => (
+        <img key={url} src={url} alt="" style={{ width: '100%', objectFit: 'cover' }} />
       ))}
     </div>
   );
