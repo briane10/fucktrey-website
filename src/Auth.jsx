@@ -12,20 +12,27 @@ export default function Auth({ onAuthChange }) {
     e.preventDefault();
     setLoading(true);
     try {
-      if (isLogin) {
-        await signInWithEmailAndPassword(auth, email, password);
-      } else {
-        await createUserWithEmailAndPassword(auth, email, password);
-      }
-      if (onAuthChange) onAuthChange(auth.currentUser);
+      const endpoint = isLogin ? '/api/auth/login' : '/api/auth/signup';
+      const res = await fetch(endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Authentication failed');
+      localStorage.setItem('token', data.idToken);
+      if (onAuthChange) onAuthChange(data);
     } catch (err) {
       alert(err.message);
     }
+    setLoading(false);
+
     setLoading(false);
   };
 
   const handleLogout = async () => {
     await signOut(auth);
+    localStorage.removeItem('token');
     if (onAuthChange) onAuthChange(null);
   };
 
