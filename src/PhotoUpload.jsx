@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
-import { supabase } from './supabaseClient';
+import { storage, db, auth } from './firebaseClient';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 
 export default function PhotoUpload() {
   const [file, setFile] = useState(null);
@@ -8,14 +10,20 @@ export default function PhotoUpload() {
   const handleUpload = async () => {
     if (!file) return;
     setUploading(true);
-    const fileExt = file.name.split('.').pop();
-    const fileName = `${Date.now()}.${fileExt}`;
-    const { error } = await supabase.storage
-      .from('photos')
-      .upload(fileName, file, { cacheControl: '3600', upsert: false });
-    if (error) alert(error.message);
-    else alert('Uploaded!');
-    setFile(null);
+    try {
+      const fileRef = ref(storage, `photos/${Date.now()}-${file.name}`);
+      await uploadBytes(fileRef, file);
+      const url = await getDownloadURL(fileRef);
+      await addDoc(collection(db, 'photos'), {
+        url,
+        uid: auth.currentUser ? auth.currentUser.uid : null,
+        createdAt: serverTimestamp(),
+      });
+      alert('Uploaded!');
+      setFile(null);
+    } catch (err) {
+      alert(err.message);
+    }
     setUploading(false);
   };
 
@@ -26,8 +34,12 @@ export default function PhotoUpload() {
         accept="image/*"
         onChange={(e) => setFile(e.target.files[0])}
       />
-      <button onClick={handleUpload} disabled={uploading || !file}>
-        {uploading ? 'Uploading…' : 'Upload'}
+      <button
+        onClick={handleUpload}
+        disabled={uploading || !file}
+        style={{ marginLeft: '0.5rem', padding: '0.5rem 1rem', background: '#FFAF00', border: 'none' }}
+      >
+        {uploading ? 'Uploading...' : 'Upload'}
       </button>
     </div>
   );
