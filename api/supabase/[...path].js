@@ -2,12 +2,11 @@ export default async function handler(req, res) {
   const supabaseUrl = process.env.VITE_SUPABASE_URL;
   const supabaseKey = process.env.VITE_SUPABASE_ANON_KEY;
 
-  // Remove the leading "/api/supabase/" from the path
-  const targetPath = req.url.replace(/^\/api\/supabase\//, "");
-  const targetUrl = `${supabaseUrl}/${targetPath}`;
+  // Construct the target URL by stripping the /api/supabase prefix
+  const targetUrl = supabaseUrl + req.url.replace(/^\/api\/supabase/, "");
 
   try {
-    const response = await fetch(targetUrl + (req._parsedUrl.search || ""), {
+    const response = await fetch(targetUrl, {
       method: req.method,
       headers: {
         ...req.headers,
@@ -17,15 +16,13 @@ export default async function handler(req, res) {
       body: req.method === "GET" || req.method === "HEAD" ? undefined : req,
     });
 
-    // Copy status and headers
+    // Forward status and headers
     res.statusCode = response.status;
-    response.headers.forEach((value, key) => {
-      res.setHeader(key, value);
-    });
+    response.headers.forEach((value, key) => res.setHeader(key, value));
 
-    // Stream the response body
-    const arrayBuffer = await response.arrayBuffer();
-    res.end(Buffer.from(arrayBuffer));
+    // Pipe the response body
+    const buffer = await response.arrayBuffer();
+    res.end(Buffer.from(buffer));
   } catch (error) {
     res.statusCode = 500;
     res.json({ error: error.message });
